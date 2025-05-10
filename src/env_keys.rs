@@ -1,0 +1,128 @@
+// Copyright (c) 2025, The Ruskit Authors
+// MIT License
+// All rights reserved.
+
+//! # Environment Keys
+//!
+//! This module contains constant definitions for environment variable keys used throughout the
+//! application for configuration purposes.
+//!
+//! These constants are used by the ConfigBuilder to read values from environment variables or
+//! .env files, allowing for a flexible configuration mechanism across different environments.
+
+/// Environment file names for different deployment environments
+pub const LOCAL_ENV_FILE_NAME: &str = "./.env.local";
+pub const DEV_ENV_FILE_NAME: &str = "./.env.develop";
+pub const STAGING_FILE_NAME: &str = "./.env.staging";
+pub const PROD_FILE_NAME: &str = "./.env.prod";
+
+/// Secret management prefixes
+pub const SECRET_PREFIX: &str = "!";
+pub const SECRET_PREFIX_TO_DECODE: &str = "!!";
+
+/// AWS default region
+pub const AWS_DEFAULT_REGION: &str = "us-east-1";
+
+/// Core application configuration keys
+pub const APP_NAME_ENV_KEY: &str = "APP_NAME";
+pub const SECRET_MANAGER_ENV_KEY: &str = "SECRET_MANAGER";
+pub const SECRET_KEY_ENV_KEY: &str = "SECRET_KEY";
+pub const HOST_NAME_ENV_KEY: &str = "HOST_NAME";
+pub const APP_PORT_ENV_KEY: &str = "APP_PORT";
+pub const LOG_LEVEL_ENV_KEY: &str = "LOG_LEVEL";
+
+/// Identity server configuration keys
+pub const IDENTITY_SERVER_URL_ENV_KEY: &str = "IDENTITY_SERVER_URL";
+pub const IDENTITY_SERVER_REALM_ENV_KEY: &str = "IDENTITY_SERVER_REALM";
+pub const IDENTITY_SERVER_AUDIENCE_ENV_KEY: &str = "IDENTITY_SERVER_AUDIENCE";
+pub const IDENTITY_SERVER_ISSUER_ENV_KEY: &str = "IDENTITY_SERVER_ISSUER";
+pub const IDENTITY_SERVER_GRANT_TYPE_ENV_KEY: &str = "IDENTITY_SERVER_GRANT_TYPE";
+pub const IDENTITY_SERVER_CLIENT_ID_ENV_KEY: &str = "IDENTITY_SERVER_CLIENT_ID";
+pub const IDENTITY_SERVER_CLIENT_SECRET_ENV_KEY: &str = "IDENTITY_SERVER_CLIENT_SECRET";
+
+/// MQTT connection configuration keys
+pub const MQTT_MULTI_BROKER_ENABLED_ENV_KEY: &str = "MQTT_MULTI_BROKER_ENABLED";
+pub const MQTT_BROKERS_ENV_KEY: &str = "MQTT_BROKERS";
+pub const MQTT_BROKER_KIND_ENV_KEY: &str = "MQTT_BROKER_KIND";
+pub const MQTT_HOST_ENV_KEY: &str = "MQTT_HOST";
+pub const MQTT_TRANSPORT_ENV_KEY: &str = "MQTT_TRANSPORT";
+pub const MQTT_PORT_ENV_KEY: &str = "MQTT_PORT";
+pub const MQTT_USER_ENV_KEY: &str = "MQTT_USER";
+pub const MQTT_PASSWORD_ENV_KEY: &str = "MQTT_PASSWORD";
+pub const MQTT_CA_CERT_PATH_ENV_KEY: &str = "MQTT_CA_CERT_PATH";
+
+/// RabbitMQ connection configuration keys
+pub const RABBITMQ_HOST_ENV_KEY: &str = "RABBITMQ_HOST";
+pub const RABBITMQ_PORT_ENV_KEY: &str = "RABBITMQ_PORT";
+pub const RABBITMQ_USER_ENV_KEY: &str = "RABBITMQ_USER";
+pub const RABBITMQ_PASSWORD_ENV_KEY: &str = "RABBITMQ_PASSWORD";
+pub const RABBITMQ_VHOST_ENV_KEY: &str = "AMQP_VHOST";
+
+/// Kafka connection configuration keys
+pub const KAFKA_HOST_ENV_KEY: &str = "KAFKA_HOST";
+pub const KAFKA_PORT_ENV_KEY: &str = "KAFKA_PORT";
+pub const KAFKA_TIMEOUT_ENV_KEY: &str = "KAFKA_TIMEOUT";
+pub const KAFKA_SECURITY_PROTOCOL_ENV_KEY: &str = "KAFKA_SECURITY_PROTOCOL";
+pub const KAFKA_SASL_MECHANISMS_ENV_KEY: &str = "KAFKA_SASL_MECHANISMS";
+pub const KAFKA_CERTIFICATE_PATH_KEY: &str = "KAFKA_CERTIFICATE_PATH";
+pub const KAFKA_CA_PATH_KEY: &str = "KAFKA_CA_PATH";
+pub const KAFKA_TRUST_STORE_PATH_KEY: &str = "KAFKA_TRUST_STORE_PATH";
+pub const KAFKA_TRUST_STORE_PASSWORD_KEY: &str = "KAFKA_TRUST_STORE_PASSWORD";
+pub const KAFKA_KEY_STORE_PATH_KEY: &str = "KAFKA_KEY_STORE_PATH";
+pub const KAFKA_KEY_STORE_PASSWORD_KEY: &str = "KAFKA_KEY_STORE_PASSWORD";
+pub const KAFKA_ENDPOINT_IDENTIFICATION_ALGORITHM_KEY: &str =
+    "KAFKA_ENDPOINT_IDENTIFICATION_ALGORITHM";
+pub const KAFKA_USER_ENV_KEY: &str = "KAFKA_USER";
+pub const KAFKA_PASSWORD_ENV_KEY: &str = "KAFKA_PASSWORD";
+
+/// Tracing configuration keys
+pub const ENABLE_TRACES_ENV_KEY: &str = "ENABLE_TRACES";
+pub const TRACE_EXPORTER_ENV_KEY: &str = "TRACE_EXPORTER";
+pub const TRACE_HOST_ENV_KEY: &str = "TRACE_HOST";
+pub const TRACE_HEADER_ACCESS_KEY_ENV_KEY: &str = "TRACE_HEADER_ACCESS_KEY";
+pub const TRACE_ACCESS_KEY_ENV_KEY: &str = "TRACE_ACCESS_KEY";
+pub const TRACE_SERVICE_TYPE_ENV_KEY: &str = "TRACE_SERVICE_TYPE";
+pub const TRACE_EXPORT_TIMEOUT_ENV_KEY: &str = "TRACE_EXPORT_TIMEOUT";
+pub const TRACE_EXPORT_RATE_BASE_ENV_KEY: &str = "TRACE_EXPORT_RATE_BASE";
+
+/// Metrics configuration keys
+pub const ENABLE_METRICS_ENV_KEY: &str = "ENABLE_METRICS";
+pub const METRIC_EXPORTER_ENV_KEY: &str = "METRIC_EXPORTER";
+pub const METRIC_HOST_ENV_KEY: &str = "METRIC_HOST";
+pub const METRIC_HEADER_ACCESS_KEY_ENV_KEY: &str = "METRIC_HEADER_ACCESS_KEY";
+pub const METRIC_ACCESS_KEY_ENV_KEY: &str = "METRIC_ACCESS_KEY";
+pub const METRIC_SERVICE_TYPE_ENV_KEY: &str = "METRIC_SERVICE_TYPE";
+pub const METRIC_EXPORT_TIMEOUT_ENV_KEY: &str = "METRIC_EXPORT_TIMEOUT";
+pub const METRIC_EXPORT_RATE_BASE_ENV_KEY: &str = "METRIC_EXPORT_RATE_BASE";
+
+/// PostgreSQL connection configuration keys
+pub const POSTGRES_HOST_ENV_KEY: &str = "POSTGRES_HOST";
+pub const POSTGRES_PORT_ENV_KEY: &str = "POSTGRES_PORT";
+pub const POSTGRES_USER_ENV_KEY: &str = "POSTGRES_USER";
+pub const POSTGRES_PASSWORD_ENV_KEY: &str = "POSTGRES_PASSWORD";
+pub const POSTGRES_DB_ENV_KEY: &str = "POSTGRES_DB";
+pub const POSTGRES_SSL_MODE_ENV_KEY: &str = "POSTGRES_SSL_MODE";
+pub const POSTGRES_CA_PATH_ENV_KEY: &str = "POSTGRES_CA_PATH";
+
+/// DynamoDB configuration keys
+pub const DYNAMO_ENDPOINT_ENV_KEY: &str = "DYNAMO_ENDPOINT";
+pub const DYNAMO_TABLE_ENV_KEY: &str = "DYNAMO_TABLE";
+pub const DYNAMO_REGION_ENV_KEY: &str = "DYNAMO_REGION";
+pub const DYNAMO_EXPIRE_ENV_KEY: &str = "DYNAMO_EXPIRE";
+
+/// InfluxDB configuration keys
+pub const INFLUX_HOST_ENV_KEY: &str = "INFLUX_HOST";
+pub const INFLUX_PORT_ENV_KEY: &str = "INFLUX_PORT";
+pub const INFLUX_BUCKET_ENV_KEY: &str = "INFLUX_BUCKET";
+pub const INFLUX_TOKEN_ENV_KEY: &str = "INFLUX_TOKEN";
+
+/// AWS IAM credentials keys
+pub const AWS_IAM_ACCESS_KEY_ID: &str = "AWS_IAM_ACCESS_KEY_ID";
+pub const AWS_IAM_SECRET_ACCESS_KEY: &str = "AWS_IAM_SECRET_ACCESS_KEY";
+
+/// Health and readiness check configuration keys
+pub const HEALTH_READINESS_PORT_ENV_KEY: &str = "HEALTH_READINESS_PORT";
+pub const ENABLE_HEALTH_READINESS_ENV_KEY: &str = "ENABLE_HEALTH_READINESS";
+
+/// SQLite configuration keys
+pub const SQLITE_FILE_NAME_ENV_KEY: &str = "SQLITE_FILE_NAME";
