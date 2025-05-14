@@ -12,40 +12,50 @@
 
 use crate::{
     env_keys::{
-        APP_NAME_ENV_KEY, APP_PORT_ENV_KEY, AWS_DEFAULT_REGION, AWS_IAM_ACCESS_KEY_ID,
-        AWS_IAM_SECRET_ACCESS_KEY, DEV_ENV_FILE_NAME, DYNAMO_ENDPOINT_ENV_KEY,
-        DYNAMO_EXPIRE_ENV_KEY, DYNAMO_REGION_ENV_KEY, DYNAMO_TABLE_ENV_KEY,
-        ENABLE_HEALTH_READINESS_ENV_KEY, ENABLE_METRICS_ENV_KEY, ENABLE_TRACES_ENV_KEY,
-        HEALTH_READINESS_PORT_ENV_KEY, HOST_NAME_ENV_KEY, IDENTITY_SERVER_AUDIENCE_ENV_KEY,
-        IDENTITY_SERVER_CLIENT_ID_ENV_KEY, IDENTITY_SERVER_CLIENT_SECRET_ENV_KEY,
-        IDENTITY_SERVER_GRANT_TYPE_ENV_KEY, IDENTITY_SERVER_ISSUER_ENV_KEY,
-        IDENTITY_SERVER_REALM_ENV_KEY, IDENTITY_SERVER_URL_ENV_KEY, INFLUX_BUCKET_ENV_KEY,
-        INFLUX_HOST_ENV_KEY, INFLUX_PORT_ENV_KEY, INFLUX_TOKEN_ENV_KEY, KAFKA_CA_PATH_KEY,
-        KAFKA_CERTIFICATE_PATH_KEY, KAFKA_ENDPOINT_IDENTIFICATION_ALGORITHM_KEY,
-        KAFKA_HOST_ENV_KEY, KAFKA_KEY_STORE_PASSWORD_KEY, KAFKA_KEY_STORE_PATH_KEY,
-        KAFKA_PASSWORD_ENV_KEY, KAFKA_PORT_ENV_KEY, KAFKA_SASL_MECHANISMS_ENV_KEY,
-        KAFKA_SECURITY_PROTOCOL_ENV_KEY, KAFKA_TIMEOUT_ENV_KEY, KAFKA_TRUST_STORE_PASSWORD_KEY,
-        KAFKA_TRUST_STORE_PATH_KEY, KAFKA_USER_ENV_KEY, LOCAL_ENV_FILE_NAME, LOG_LEVEL_ENV_KEY,
-        METRIC_ACCESS_KEY_ENV_KEY, METRIC_EXPORT_RATE_BASE_ENV_KEY, METRIC_EXPORT_TIMEOUT_ENV_KEY,
-        METRIC_EXPORTER_ENV_KEY, METRIC_HEADER_ACCESS_KEY_ENV_KEY, METRIC_HOST_ENV_KEY,
-        METRIC_SERVICE_TYPE_ENV_KEY, MQTT_BROKER_KIND_ENV_KEY, MQTT_BROKERS_ENV_KEY,
-        MQTT_CA_CERT_PATH_ENV_KEY, MQTT_HOST_ENV_KEY, MQTT_MULTI_BROKER_ENABLED_ENV_KEY,
-        MQTT_PASSWORD_ENV_KEY, MQTT_PORT_ENV_KEY, MQTT_TRANSPORT_ENV_KEY, MQTT_USER_ENV_KEY,
-        POSTGRES_CA_PATH_ENV_KEY, POSTGRES_DB_ENV_KEY, POSTGRES_HOST_ENV_KEY,
-        POSTGRES_PASSWORD_ENV_KEY, POSTGRES_PORT_ENV_KEY, POSTGRES_SSL_MODE_ENV_KEY,
-        POSTGRES_USER_ENV_KEY, PROD_FILE_NAME, RABBITMQ_HOST_ENV_KEY, RABBITMQ_PASSWORD_ENV_KEY,
-        RABBITMQ_PORT_ENV_KEY, RABBITMQ_USER_ENV_KEY, RABBITMQ_VHOST_ENV_KEY, SECRET_KEY_ENV_KEY,
-        SECRET_MANAGER_ENV_KEY, SECRET_PREFIX, SQLITE_FILE_NAME_ENV_KEY, STAGING_FILE_NAME,
-        TRACE_ACCESS_KEY_ENV_KEY, TRACE_EXPORT_RATE_BASE_ENV_KEY, TRACE_EXPORT_TIMEOUT_ENV_KEY,
-        TRACE_EXPORTER_ENV_KEY, TRACE_HEADER_ACCESS_KEY_ENV_KEY, TRACE_HOST_ENV_KEY,
-        TRACE_SERVICE_TYPE_ENV_KEY,
+        DEV_ENV_FILE_NAME, LOCAL_ENV_FILE_NAME, PROD_FILE_NAME, SECRET_PREFIX, STAGING_FILE_NAME,
     },
     errors::ConfigsError,
 };
 use base64::{Engine, engine::general_purpose};
 use configs::{
-    AppConfigs, Configs, DynamicConfigs, Environment, MQTTBrokerKind, MQTTConnectionConfigs,
-    MQTTTransport, MetricExporterKind, SecretsManagerKind, TraceExporterKind,
+    app::{
+        APP_NAME_ENV_KEY, APP_PORT_ENV_KEY, AppConfigs, HOST_NAME_ENV_KEY, LOG_LEVEL_ENV_KEY,
+        SECRET_KEY_ENV_KEY, SECRET_MANAGER_ENV_KEY,
+    },
+    aws::{AWS_IAM_ACCESS_KEY_ID, AWS_IAM_SECRET_ACCESS_KEY},
+    dynamo::{
+        DYNAMO_ENDPOINT_ENV_KEY, DYNAMO_EXPIRE_ENV_KEY, DYNAMO_REGION_ENV_KEY, DYNAMO_TABLE_ENV_KEY,
+    },
+    health_readiness::{ENABLE_HEALTH_READINESS_ENV_KEY, HEALTH_READINESS_PORT_ENV_KEY},
+    identity_server::{
+        IDENTITY_SERVER_AUDIENCE_ENV_KEY, IDENTITY_SERVER_CLIENT_ID_ENV_KEY,
+        IDENTITY_SERVER_CLIENT_SECRET_ENV_KEY, IDENTITY_SERVER_GRANT_TYPE_ENV_KEY,
+        IDENTITY_SERVER_ISSUER_ENV_KEY, IDENTITY_SERVER_REALM_ENV_KEY, IDENTITY_SERVER_URL_ENV_KEY,
+    },
+    influx::{
+        INFLUX_BUCKET_ENV_KEY, INFLUX_HOST_ENV_KEY, INFLUX_PORT_ENV_KEY, INFLUX_TOKEN_ENV_KEY,
+    },
+    kafka::{
+        KAFKA_CA_PATH_KEY, KAFKA_CERTIFICATE_PATH_KEY, KAFKA_ENDPOINT_IDENTIFICATION_ALGORITHM_KEY,
+        KAFKA_HOST_ENV_KEY, KAFKA_KEY_STORE_PASSWORD_KEY, KAFKA_KEY_STORE_PATH_KEY,
+        KAFKA_PASSWORD_ENV_KEY, KAFKA_PORT_ENV_KEY, KAFKA_SASL_MECHANISMS_ENV_KEY,
+        KAFKA_SECURITY_PROTOCOL_ENV_KEY, KAFKA_TIMEOUT_ENV_KEY, KAFKA_TRUST_STORE_PASSWORD_KEY,
+        KAFKA_TRUST_STORE_PATH_KEY, KAFKA_USER_ENV_KEY,
+    },
+    mqtt::{
+        MQTT_BROKER_KIND_ENV_KEY, MQTT_CA_CERT_PATH_ENV_KEY, MQTT_HOST_ENV_KEY,
+        MQTT_PASSWORD_ENV_KEY, MQTT_PORT_ENV_KEY, MQTT_TRANSPORT_ENV_KEY, MQTT_USER_ENV_KEY,
+    },
+    postgres::{
+        POSTGRES_CA_PATH_ENV_KEY, POSTGRES_DB_ENV_KEY, POSTGRES_HOST_ENV_KEY,
+        POSTGRES_PASSWORD_ENV_KEY, POSTGRES_PORT_ENV_KEY, POSTGRES_SSL_MODE_ENV_KEY,
+        POSTGRES_USER_ENV_KEY,
+    },
+    rabbitmq::{
+        RABBITMQ_HOST_ENV_KEY, RABBITMQ_PASSWORD_ENV_KEY, RABBITMQ_PORT_ENV_KEY,
+        RABBITMQ_USER_ENV_KEY, RABBITMQ_VHOST_ENV_KEY,
+    },
+    sqlite::SQLITE_FILE_NAME_ENV_KEY,
 };
 use dotenvy::from_filename;
 use secrets_manager::{AWSSecretClientBuilder, FakeSecretClient, SecretClient};
@@ -70,6 +80,7 @@ use tracing::error;
 /// ```
 #[derive(Default)]
 pub struct ConfigBuilder {
+    envs_already_loaded: bool,
     client: Option<Arc<dyn SecretClient>>,
     mqtt: bool,
     rabbitmq: bool,
@@ -79,8 +90,6 @@ pub struct ConfigBuilder {
     sqlite: bool,
     influx: bool,
     aws: bool,
-    metric: bool,
-    trace: bool,
     health: bool,
     identity: bool,
 }
@@ -91,6 +100,24 @@ impl ConfigBuilder {
     /// By default, all configuration sections are disabled.
     pub fn new() -> ConfigBuilder {
         ConfigBuilder::default()
+    }
+
+    pub fn load_envs(&self) {
+        let env = Environment::from_rust_env();
+        match env {
+            Environment::Prod => {
+                from_filename(PROD_FILE_NAME).ok();
+            }
+            Environment::Staging => {
+                from_filename(STAGING_FILE_NAME).ok();
+            }
+            Environment::Dev => {
+                from_filename(DEV_ENV_FILE_NAME).ok();
+            }
+            _ => {
+                from_filename(LOCAL_ENV_FILE_NAME).ok();
+            }
+        }
     }
 
     /// Enables MQTT configuration.
@@ -165,24 +192,6 @@ impl ConfigBuilder {
         self
     }
 
-    /// Enables metrics configuration.
-    ///
-    /// When enabled, the builder will attempt to load metrics-related configuration
-    /// from environment variables.
-    pub fn metric(mut self) -> Self {
-        self.metric = true;
-        self
-    }
-
-    /// Enables tracing configuration.
-    ///
-    /// When enabled, the builder will attempt to load tracing-related configuration
-    /// from environment variables.
-    pub fn trace(mut self) -> Self {
-        self.trace = true;
-        self
-    }
-
     /// Enables health and readiness check configuration.
     ///
     /// When enabled, the builder will attempt to load health check-related configuration
@@ -237,12 +246,9 @@ impl ConfigBuilder {
         }
 
         let mut cfg = Configs::<T>::default();
-        self.fill_app(&mut cfg);
+        cfg.app = AppConfigs::new();
 
-        match logging::setup(&cfg.app) {
-            Err(_) => Err(ConfigsError::InternalError {}),
-            _ => Ok(()),
-        }?;
+        //@TODO: OTLP Setup
 
         cfg.dynamic.load();
 
@@ -327,50 +333,7 @@ impl ConfigBuilder {
 
 // Configuration filling methods
 impl ConfigBuilder {
-    /// Fills the core application configuration from environment variables.
-    ///
-    /// # Parameters
-    ///
-    /// * `cfg` - Mutable reference to the configuration being built.
-    fn fill_app<T>(&self, cfg: &mut Configs<T>)
-    where
-        T: DynamicConfigs,
-    {
-        let env = Environment::from_rust_env();
-        let name = self.fmt_name(&env, env::var(APP_NAME_ENV_KEY).unwrap_or_default());
-        let secret_key = env::var(SECRET_KEY_ENV_KEY).unwrap_or_default();
-        let host = env::var(HOST_NAME_ENV_KEY).unwrap_or_default();
-        let port = env::var(APP_PORT_ENV_KEY)
-            .unwrap_or("3000".into())
-            .parse()
-            .unwrap_or_default();
-        let log_level = env::var(LOG_LEVEL_ENV_KEY).unwrap_or("debug".into());
-        let secret_manager = env::var(SECRET_MANAGER_ENV_KEY).unwrap_or("None".into());
-
-        cfg.app = AppConfigs {
-            enable_external_creates_logging: false,
-            env,
-            host,
-            log_level,
-            name,
-            port,
-            secret_key,
-            secret_manager: SecretsManagerKind::from(&secret_manager),
-        };
-    }
-
-    /// Fills metric configuration from environment variables.
-    ///
-    /// # Parameters
-    ///
-    /// * `cfg` - Mutable reference to the configuration being built.
-    /// * `key` - Environment variable key.
-    /// * `value` - Environment variable value.
-    ///
-    /// # Returns
-    ///
-    /// `true` if the key was recognized and processed, `false` otherwise.
-    fn fill_metric<T>(
+    fn fill_otlp<T>(
         &self,
         cfg: &mut Configs<T>,
         key: impl Into<std::string::String>,
@@ -379,109 +342,11 @@ impl ConfigBuilder {
     where
         T: DynamicConfigs,
     {
-        if !self.metric {
-            return false;
-        }
+        // match key.into().as_str() {
 
-        match key.into().as_str() {
-            ENABLE_METRICS_ENV_KEY => {
-                cfg.metric.enable = self.get_from_secret(value.into(), false);
-                true
-            }
-            METRIC_EXPORTER_ENV_KEY => {
-                cfg.metric.exporter =
-                    self.get_from_secret(value.into(), MetricExporterKind::Stdout);
-                true
-            }
-            METRIC_HOST_ENV_KEY => {
-                cfg.metric.host = self.get_from_secret(value.into(), "localhost".into());
-                true
-            }
-            METRIC_HEADER_ACCESS_KEY_ENV_KEY => {
-                cfg.metric.header_access_key = self.get_from_secret(value.into(), "api-key".into());
-                true
-            }
-            METRIC_ACCESS_KEY_ENV_KEY => {
-                cfg.metric.access_key = self.get_from_secret(value.into(), "key".into());
-                true
-            }
-            METRIC_SERVICE_TYPE_ENV_KEY => {
-                cfg.metric.service_type = self.get_from_secret(value.into(), "service".into());
-                true
-            }
-            METRIC_EXPORT_TIMEOUT_ENV_KEY => {
-                let k: String = value.into();
-                cfg.metric.export_timeout = self.get_from_secret(k.clone(), 30);
-                true
-            }
-            METRIC_EXPORT_RATE_BASE_ENV_KEY => {
-                cfg.metric.export_rate_base = self.get_from_secret(value.into(), 0.8);
-                true
-            }
-            _ => false,
-        }
-    }
+        // }
 
-    /// Fills tracing configuration from environment variables.
-    ///
-    /// # Parameters
-    ///
-    /// * `cfg` - Mutable reference to the configuration being built.
-    /// * `key` - Environment variable key.
-    /// * `value` - Environment variable value.
-    ///
-    /// # Returns
-    ///
-    /// `true` if the key was recognized and processed, `false` otherwise.
-    fn fill_trace<T>(
-        &self,
-        cfg: &mut Configs<T>,
-        key: impl Into<std::string::String>,
-        value: impl Into<std::string::String>,
-    ) -> bool
-    where
-        T: DynamicConfigs,
-    {
-        if !self.trace {
-            return false;
-        }
-
-        match key.into().as_str() {
-            ENABLE_TRACES_ENV_KEY => {
-                cfg.trace.enable = self.get_from_secret(value.into(), false);
-                true
-            }
-            TRACE_EXPORTER_ENV_KEY => {
-                cfg.trace.exporter = self.get_from_secret(value.into(), TraceExporterKind::Stdout);
-                true
-            }
-            TRACE_HOST_ENV_KEY => {
-                cfg.trace.host = self.get_from_secret(value.into(), "localhost".into());
-                true
-            }
-            TRACE_HEADER_ACCESS_KEY_ENV_KEY => {
-                cfg.trace.header_access_key = self.get_from_secret(value.into(), "api-key".into());
-                true
-            }
-            TRACE_ACCESS_KEY_ENV_KEY => {
-                cfg.trace.access_key = self.get_from_secret(value.into(), "key".into());
-                true
-            }
-            TRACE_SERVICE_TYPE_ENV_KEY => {
-                cfg.trace.service_type = self.get_from_secret(value.into(), "service".into());
-                true
-            }
-            TRACE_EXPORT_TIMEOUT_ENV_KEY => {
-                let k: String = value.into();
-                cfg.trace.export_timeout = self.get_from_secret(k.clone(), 30);
-                true
-            }
-            TRACE_EXPORT_RATE_BASE_ENV_KEY => {
-                cfg.trace.export_rate_base = self.get_from_secret(value.into(), 0.8);
-                true
-            }
-            _ => false,
-        }
+        return true;
     }
 
     /// Fills identity server configuration from environment variables.
