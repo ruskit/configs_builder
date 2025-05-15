@@ -589,8 +589,9 @@ dependencies = [
 [[package]]
 name = "configs"
 version = "0.0.1"
-source = "git+ssh://git@github.com/ruskit/configs.git?rev=beta-v0.0.0#709a82c25b451ae4031598c7243741b6d568a9ce"
+source = "git+ssh://git@github.com/ruskit/configs.git?rev=beta-v0.0.3#55ddd1e07f6f01d023c15f93e03e1698e270dbb8"
 dependencies = [
+ "secrets-manager",
  "serde",
 ]
 
@@ -607,7 +608,7 @@ name = "configs-builder"
 version = "0.0.1"
 dependencies = [
  "base64 0.22.1",
- "configs 0.0.1 (git+ssh://git@github.com/ruskit/configs.git?rev=beta-v0.0.0)",
+ "configs 0.0.1 (git+ssh://git@github.com/ruskit/configs.git?rev=beta-v0.0.3)",
  "dotenvy",
  "logging",
  "secrets-manager",

@@ -50,7 +50,7 @@ use configs::{
     },
     otlp::{
         OTLP_ACCESS_KEY_ENV_KEY, OTLP_EXPORTER_ENDPOINT_ENV_KEY, OTLP_EXPORTER_INTERVAL_ENV_KEY,
-        OTLP_EXPORTER_RATE_BASE_ENV_KEY, OTLP_EXPORTER_TIMEOUT_ENV_KEY,
+        OTLP_EXPORTER_RATE_BASE_ENV_KEY, OTLP_EXPORTER_TIMEOUT_ENV_KEY, OTLP_EXPORTER_TYPE_ENV_KEY,
         OTLP_METRICS_ENABLED_ENV_KEY, OTLP_TRACES_ENABLED_KEY_ENV_KEY,
     },
     postgres::{
@@ -83,7 +83,7 @@ use tracing::error;
 /// let configs = ConfigBuilder::new()
 ///     .postgres()
 ///     .mqtt()
-///     .build::<MyDynamicConfigs>()()
+///     .build::<MyDynamicConfigs>()
 ///     .await?;
 /// ```
 #[derive(Default)]
@@ -256,9 +256,8 @@ impl ConfigBuilder {
             }
         }?;
 
-        cfg.dynamic.load();
-
         self.client = self.get_secret_client(&cfg.app).await?;
+        cfg.dynamic.load(self.client.as_ref().unwrap().clone());
 
         for (key, value) in env::vars() {
             if self.fill_otlp(&mut cfg, &key, &value) {
@@ -350,6 +349,11 @@ impl ConfigBuilder {
         T: DynamicConfigs,
     {
         match key.into().as_str() {
+            OTLP_EXPORTER_TYPE_ENV_KEY => {
+                let t: String = self.get_from_secret(value.into(), "stdout".into());
+                cfg.otlp.exporter_type = t.as_str().into();
+                true
+            }
             OTLP_EXPORTER_ENDPOINT_ENV_KEY => {
                 cfg.otlp.endpoint =
                     self.get_from_secret(value.into(), "http://localhost:4317".into());
@@ -370,7 +374,7 @@ impl ConfigBuilder {
                 true
             }
             OTLP_EXPORTER_RATE_BASE_ENV_KEY => {
-                cfg.otlp.exporter_rate_base = self.get_from_secret(value.into(), 10).into();
+                cfg.otlp.exporter_rate_base = self.get_from_secret(value.into(), 0.8).into();
                 true
             }
             OTLP_METRICS_ENABLED_ENV_KEY => {

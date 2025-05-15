@@ -4,7 +4,7 @@ version = "0.0.1"
 edition = "2024"
 
 [dependencies]
-configs = { git = "ssh://git@github.com/ruskit/configs.git", rev = "beta-v0.0.0" }
+configs = { git = "ssh://git@github.com/ruskit/configs.git", rev = "beta-v0.0.3" }
 secrets-manager = { git = "ssh://git@github.com/ruskit/secrets_manager.git", rev = "v0.0.0" }
 logging = { git = "ssh://git@github.com/ruskit/logging.git", rev = "beta-v0.0.0" }
 
