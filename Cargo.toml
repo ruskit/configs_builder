@@ -13,4 +13,3 @@ tracing = { version = "0.1.41" }
 dotenvy = { version = "0.15.7" }
 base64 = { version = "0.22.1" }
 serde_json = { version = "1.0.140" }
-opentelemetry_sdk = { version = "0.29.0", features = ["logs", "trace", "metrics"] }

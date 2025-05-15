@@ -48,6 +48,11 @@ use configs::{
         MQTT_PORT_ENV_KEY, MQTT_TRANSPORT_ENV_KEY, MQTT_USER_ENV_KEY, MQTTBrokerKind,
         MQTTConnectionConfigs, MQTTTransport,
     },
+    otlp::{
+        OTLP_ACCESS_KEY_ENV_KEY, OTLP_EXPORTER_ENDPOINT_ENV_KEY, OTLP_EXPORTER_INTERVAL_ENV_KEY,
+        OTLP_EXPORTER_RATE_BASE_ENV_KEY, OTLP_EXPORTER_TIMEOUT_ENV_KEY,
+        OTLP_METRICS_ENABLED_ENV_KEY, OTLP_TRACES_ENABLED_KEY_ENV_KEY,
+    },
     postgres::{
         POSTGRES_CA_PATH_ENV_KEY, POSTGRES_DB_ENV_KEY, POSTGRES_HOST_ENV_KEY,
         POSTGRES_PASSWORD_ENV_KEY, POSTGRES_PORT_ENV_KEY, POSTGRES_SSL_MODE_ENV_KEY,
@@ -62,12 +67,9 @@ use configs::{
 };
 use dotenvy::from_filename;
 use logging;
-use opentelemetry_sdk::{
-    logs::SdkLoggerProvider, metrics::SdkMeterProvider, trace::SdkTracerProvider,
-};
 use secrets_manager::{AWSSecretClientBuilder, FakeSecretClient, SecretClient};
-use std::{env, str::FromStr, sync::Arc};
-use tracing::{error, info};
+use std::{env, str::FromStr, sync::Arc, time::Duration};
+use tracing::error;
 
 /// The main configuration builder struct.
 ///
@@ -98,9 +100,6 @@ pub struct ConfigBuilder {
     health: bool,
     identity: bool,
     envs_already_loaded: bool,
-    logger_provider: Option<SdkLoggerProvider>,
-    metrics_provider: Option<SdkMeterProvider>,
-    trace_provider: Option<SdkTracerProvider>,
 }
 
 impl ConfigBuilder {
@@ -246,7 +245,7 @@ impl ConfigBuilder {
         let mut cfg = Configs::<T>::default();
         cfg.app = AppConfigs::new();
 
-        let logger_provider = match logging::provider::install() {
+        let _logger_provider = match logging::provider::install() {
             Ok(p) => Ok(p),
             Err(err) => {
                 error!(
@@ -257,7 +256,6 @@ impl ConfigBuilder {
             }
         }?;
 
-        self.logger_provider = Some(logger_provider);
         cfg.dynamic.load();
 
         self.client = self.get_secret_client(&cfg.app).await?;
@@ -302,47 +300,6 @@ impl ConfigBuilder {
         //Metric Provider
 
         Ok(cfg)
-    }
-
-    pub fn shotdown(&self) {
-        if self.logger_provider.is_some() {
-            match self.logger_provider.as_ref().unwrap().shutdown() {
-                Ok(_) => {
-                    info!("logger provider shutdown successfully");
-                }
-                Err(err) => {
-                    error!(
-                        error = err.to_string(),
-                        "failed to shutdown logger provider"
-                    );
-                }
-            }
-        }
-
-        if self.trace_provider.is_some() {
-            match self.trace_provider.as_ref().unwrap().shutdown() {
-                Ok(_) => {
-                    info!("trace provider shutdown successfully");
-                }
-                Err(err) => {
-                    error!(error = err.to_string(), "failed to shutdown trace provider");
-                }
-            }
-        }
-
-        if self.metrics_provider.is_some() {
-            match self.metrics_provider.as_ref().unwrap().shutdown() {
-                Ok(_) => {
-                    info!("metrics provider shutdown successfully");
-                }
-                Err(err) => {
-                    error!(
-                        error = err.to_string(),
-                        "failed to shutdown metrics provider"
-                    );
-                }
-            }
-        }
     }
 }
 
@@ -392,11 +349,40 @@ impl ConfigBuilder {
     where
         T: DynamicConfigs,
     {
-        // match key.into().as_str() {
-
-        // }
-
-        return true;
+        match key.into().as_str() {
+            OTLP_EXPORTER_ENDPOINT_ENV_KEY => {
+                cfg.otlp.endpoint =
+                    self.get_from_secret(value.into(), "http://localhost:4317".into());
+                true
+            }
+            OTLP_ACCESS_KEY_ENV_KEY => {
+                cfg.otlp.access_key = self.get_from_secret(value.into(), "access_key".into());
+                true
+            }
+            OTLP_EXPORTER_TIMEOUT_ENV_KEY => {
+                cfg.otlp.exporter_timeout =
+                    Duration::from_secs(self.get_from_secret(value.into(), 60) as u64);
+                true
+            }
+            OTLP_EXPORTER_INTERVAL_ENV_KEY => {
+                cfg.otlp.exporter_interval =
+                    Duration::from_secs(self.get_from_secret(value.into(), 60) as u64);
+                true
+            }
+            OTLP_EXPORTER_RATE_BASE_ENV_KEY => {
+                cfg.otlp.exporter_rate_base = self.get_from_secret(value.into(), 10).into();
+                true
+            }
+            OTLP_METRICS_ENABLED_ENV_KEY => {
+                cfg.otlp.metrics_enabled = self.get_from_secret(value.into(), false).into();
+                true
+            }
+            OTLP_TRACES_ENABLED_KEY_ENV_KEY => {
+                cfg.otlp.traces_enabled = self.get_from_secret(value.into(), false).into();
+                true
+            }
+            _ => false,
+        }
     }
 
     /// Fills identity server configuration from environment variables.
