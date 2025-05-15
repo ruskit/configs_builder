@@ -26,8 +26,6 @@
 //! async fn setup_configs() -> Result<(), Box<dyn std::error::Error>> {
 //!     let configs = ConfigBuilder::new()
 //!         .postgres()
-//!         .metric()
-//!         .trace()
 //!         .build::<MyDynamicConfigs>()
 //!         .await?;
 //!     

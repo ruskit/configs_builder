@@ -4,12 +4,13 @@ version = "0.0.1"
 edition = "2024"
 
 [dependencies]
-configs = { git = "ssh://git@github.com/ruskit/configs.git", rev = "v0.0.0" }
+configs = { git = "ssh://git@github.com/ruskit/configs.git", rev = "beta-v0.0.0" }
 secrets-manager = { git = "ssh://git@github.com/ruskit/secrets_manager.git", rev = "v0.0.0" }
-logging = { git = "ssh://git@github.com/ruskit/logging.git", rev = "v0.0.0" }
+logging = { git = "ssh://git@github.com/ruskit/logging.git", rev = "beta-v0.0.0" }
 
 thiserror = { version = "2.0.12" }
 tracing = { version = "0.1.41" }
 dotenvy = { version = "0.15.7" }
 base64 = { version = "0.22.1" }
 serde_json = { version = "1.0.140" }
+opentelemetry_sdk = { version = "0.29.0", features = ["logs", "trace", "metrics"] }

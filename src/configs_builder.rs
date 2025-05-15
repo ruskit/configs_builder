@@ -18,14 +18,14 @@ use crate::{
 };
 use base64::{Engine, engine::general_purpose};
 use configs::{
-    app::{
-        APP_NAME_ENV_KEY, APP_PORT_ENV_KEY, AppConfigs, HOST_NAME_ENV_KEY, LOG_LEVEL_ENV_KEY,
-        SECRET_KEY_ENV_KEY, SECRET_MANAGER_ENV_KEY,
-    },
-    aws::{AWS_IAM_ACCESS_KEY_ID, AWS_IAM_SECRET_ACCESS_KEY},
+    app::AppConfigs,
+    aws::{AWS_DEFAULT_REGION, AWS_IAM_ACCESS_KEY_ID, AWS_IAM_SECRET_ACCESS_KEY},
+    configs::Configs,
+    dynamic::DynamicConfigs,
     dynamo::{
         DYNAMO_ENDPOINT_ENV_KEY, DYNAMO_EXPIRE_ENV_KEY, DYNAMO_REGION_ENV_KEY, DYNAMO_TABLE_ENV_KEY,
     },
+    environment::Environment,
     health_readiness::{ENABLE_HEALTH_READINESS_ENV_KEY, HEALTH_READINESS_PORT_ENV_KEY},
     identity_server::{
         IDENTITY_SERVER_AUDIENCE_ENV_KEY, IDENTITY_SERVER_CLIENT_ID_ENV_KEY,
@@ -43,8 +43,10 @@ use configs::{
         KAFKA_TRUST_STORE_PATH_KEY, KAFKA_USER_ENV_KEY,
     },
     mqtt::{
-        MQTT_BROKER_KIND_ENV_KEY, MQTT_CA_CERT_PATH_ENV_KEY, MQTT_HOST_ENV_KEY,
-        MQTT_PASSWORD_ENV_KEY, MQTT_PORT_ENV_KEY, MQTT_TRANSPORT_ENV_KEY, MQTT_USER_ENV_KEY,
+        MQTT_BROKER_KIND_ENV_KEY, MQTT_BROKERS_ENV_KEY, MQTT_CA_CERT_PATH_ENV_KEY,
+        MQTT_HOST_ENV_KEY, MQTT_MULTI_BROKER_ENABLED_ENV_KEY, MQTT_PASSWORD_ENV_KEY,
+        MQTT_PORT_ENV_KEY, MQTT_TRANSPORT_ENV_KEY, MQTT_USER_ENV_KEY, MQTTBrokerKind,
+        MQTTConnectionConfigs, MQTTTransport,
     },
     postgres::{
         POSTGRES_CA_PATH_ENV_KEY, POSTGRES_DB_ENV_KEY, POSTGRES_HOST_ENV_KEY,
@@ -55,12 +57,17 @@ use configs::{
         RABBITMQ_HOST_ENV_KEY, RABBITMQ_PASSWORD_ENV_KEY, RABBITMQ_PORT_ENV_KEY,
         RABBITMQ_USER_ENV_KEY, RABBITMQ_VHOST_ENV_KEY,
     },
+    secrets::SecretsManagerKind,
     sqlite::SQLITE_FILE_NAME_ENV_KEY,
 };
 use dotenvy::from_filename;
+use logging;
+use opentelemetry_sdk::{
+    logs::SdkLoggerProvider, metrics::SdkMeterProvider, trace::SdkTracerProvider,
+};
 use secrets_manager::{AWSSecretClientBuilder, FakeSecretClient, SecretClient};
 use std::{env, str::FromStr, sync::Arc};
-use tracing::error;
+use tracing::{error, info};
 
 /// The main configuration builder struct.
 ///
@@ -71,16 +78,14 @@ use tracing::error;
 /// # Example
 ///
 /// ```rust
-/// let config_builder = ConfigBuilder::new()
+/// let configs = ConfigBuilder::new()
 ///     .postgres()
 ///     .mqtt()
-///     .trace();
-///
-/// let configs = config_builder.build::<MyDynamicConfigs>().await?;
+///     .build::<MyDynamicConfigs>()()
+///     .await?;
 /// ```
 #[derive(Default)]
 pub struct ConfigBuilder {
-    envs_already_loaded: bool,
     client: Option<Arc<dyn SecretClient>>,
     mqtt: bool,
     rabbitmq: bool,
@@ -92,6 +97,10 @@ pub struct ConfigBuilder {
     aws: bool,
     health: bool,
     identity: bool,
+    envs_already_loaded: bool,
+    logger_provider: Option<SdkLoggerProvider>,
+    metrics_provider: Option<SdkMeterProvider>,
+    trace_provider: Option<SdkTracerProvider>,
 }
 
 impl ConfigBuilder {
@@ -229,32 +238,34 @@ impl ConfigBuilder {
     where
         T: DynamicConfigs,
     {
-        let env = Environment::from_rust_env();
-        match env {
-            Environment::Prod => {
-                from_filename(PROD_FILE_NAME).ok();
-            }
-            Environment::Staging => {
-                from_filename(STAGING_FILE_NAME).ok();
-            }
-            Environment::Dev => {
-                from_filename(DEV_ENV_FILE_NAME).ok();
-            }
-            _ => {
-                from_filename(LOCAL_ENV_FILE_NAME).ok();
-            }
+        if !self.envs_already_loaded {
+            self.load_envs();
+            self.envs_already_loaded = true;
         }
 
         let mut cfg = Configs::<T>::default();
         cfg.app = AppConfigs::new();
 
-        //@TODO: OTLP Setup
+        let logger_provider = match logging::provider::install() {
+            Ok(p) => Ok(p),
+            Err(err) => {
+                error!(
+                    error = err.to_string(),
+                    "failed to install logging provider"
+                );
+                Err(ConfigsError::LoggingSetupError)
+            }
+        }?;
 
+        self.logger_provider = Some(logger_provider);
         cfg.dynamic.load();
 
         self.client = self.get_secret_client(&cfg.app).await?;
 
         for (key, value) in env::vars() {
+            if self.fill_otlp(&mut cfg, &key, &value) {
+                continue;
+            };
             if self.fill_identity_server(&mut cfg, &key, &value) {
                 continue;
             };
@@ -267,12 +278,6 @@ impl ConfigBuilder {
             if self.fill_kafka(&mut cfg, &key, &value) {
                 continue;
             };
-            if self.fill_trace(&mut cfg, &key, &value) {
-                continue;
-            }
-            if self.fill_metric(&mut cfg, &key, &value) {
-                continue;
-            }
             if self.fill_postgres(&mut cfg, &key, &value) {
                 continue;
             };
@@ -293,7 +298,51 @@ impl ConfigBuilder {
             };
         }
 
+        //Trace Provider
+        //Metric Provider
+
         Ok(cfg)
+    }
+
+    pub fn shotdown(&self) {
+        if self.logger_provider.is_some() {
+            match self.logger_provider.as_ref().unwrap().shutdown() {
+                Ok(_) => {
+                    info!("logger provider shutdown successfully");
+                }
+                Err(err) => {
+                    error!(
+                        error = err.to_string(),
+                        "failed to shutdown logger provider"
+                    );
+                }
+            }
+        }
+
+        if self.trace_provider.is_some() {
+            match self.trace_provider.as_ref().unwrap().shutdown() {
+                Ok(_) => {
+                    info!("trace provider shutdown successfully");
+                }
+                Err(err) => {
+                    error!(error = err.to_string(), "failed to shutdown trace provider");
+                }
+            }
+        }
+
+        if self.metrics_provider.is_some() {
+            match self.metrics_provider.as_ref().unwrap().shutdown() {
+                Ok(_) => {
+                    info!("metrics provider shutdown successfully");
+                }
+                Err(err) => {
+                    error!(
+                        error = err.to_string(),
+                        "failed to shutdown metrics provider"
+                    );
+                }
+            }
+        }
     }
 }
 
@@ -317,9 +366,10 @@ impl ConfigBuilder {
             SecretsManagerKind::None => Ok(Some(Arc::new(FakeSecretClient::new()))),
 
             SecretsManagerKind::AWSSecretManager => {
-                let secret_key = env::var(SECRET_KEY_ENV_KEY).unwrap_or_default();
-
-                match AWSSecretClientBuilder::new(secret_key).build().await {
+                match AWSSecretClientBuilder::new(app_cfg.secret_key.clone())
+                    .build()
+                    .await
+                {
                     Ok(c) => Ok(Some(Arc::new(c))),
                     Err(err) => {
                         error!(error = err.to_string(), "error to create aws secret client");
@@ -843,14 +893,6 @@ impl ConfigBuilder {
                 cfg.sqlite.file = self.get_from_secret(value.into(), "local.db".into());
                 true
             }
-            "SQLITE_USER" => {
-                cfg.sqlite.user = self.get_from_secret(value.into(), "user".into());
-                true
-            }
-            "SQLITE_PASSWORD" => {
-                cfg.sqlite.password = self.get_from_secret(value.into(), "password".into());
-                true
-            }
             _ => false,
         }
     }
@@ -926,25 +968,6 @@ impl ConfigBuilder {
             error!(key = key, value = v, "parse went wrong");
             default
         })
-    }
-
-    /// Formats the application name based on the environment.
-    ///
-    /// # Parameters
-    ///
-    /// * `env` - Application environment.
-    /// * `name` - Application name.
-    ///
-    /// # Returns
-    ///
-    /// The formatted application name.
-    fn fmt_name(&self, env: &Environment, name: String) -> String {
-        let env_str = env.to_string();
-        if name.starts_with(&env_str) {
-            return name;
-        }
-
-        format!("{}-{}", env_str, name)
     }
 
     /// Decodes a base64-encoded string.

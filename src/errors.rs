@@ -18,6 +18,9 @@ pub enum ConfigsError {
     #[error("internal error")]
     InternalError,
 
+    #[error("failed to configure logging")]
+    LoggingSetupError,
+
     /// Error that occurred while loading secrets from a secret manager.
     /// Contains a message with details about the error.
     #[error("error to load secrets from secret manager - `{0}`")]
