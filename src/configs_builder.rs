@@ -249,7 +249,7 @@ impl ConfigBuilder {
             Ok(p) => Ok(p),
             Err(err) => {
                 error!(
-                    error = err.to_string(),
+                    error = ?err,
                     "failed to install logging provider"
                 );
                 Err(ConfigsError::LoggingSetupError)
