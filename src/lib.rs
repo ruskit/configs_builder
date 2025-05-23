@@ -12,11 +12,21 @@
 //!
 //! ## Features
 //!
-//! - Configuration from environment variables
-//! - Secret management integration
+//! - Configuration from environment variables with automatic loading based on environment
+//! - Secret management integration with AWS Secrets Manager and local fallbacks
 //! - Support for multiple environments (local, dev, staging, production)
-//! - Support for various infrastructure configurations (MQTT, RabbitMQ, Kafka, PostgreSQL, DynamoDB, etc.)
+//! - Support for various infrastructure configurations:
+//!   - Message brokers: MQTT, RabbitMQ, Kafka
+//!   - Databases: PostgreSQL, DynamoDB, SQLite
+//!   - Cloud services: AWS, InfluxDB
 //! - Observability configurations (metrics, tracing, health checks)
+//! - Identity server integration for authentication and authorization
+//!
+//! ## Architecture
+//!
+//! The library follows a builder pattern, allowing applications to selectively enable only
+//! the configuration components they need. Each component is loaded from environment variables
+//! or secret managers based on the current application environment.
 //!
 //! ## Example
 //!
@@ -24,10 +34,16 @@
 //! use configs_builder::ConfigBuilder;
 //!
 //! async fn setup_configs() -> Result<(), Box<dyn std::error::Error>> {
-//!     let configs = ConfigBuilder::new()
-//!         .postgres()
+//!     // Create a new configuration builder and enable only the components you need
+//!     let (configs, otel_providers) = ConfigBuilder::new()
+//!         .postgres()     // Enable PostgreSQL configuration
+//!         .mqtt()         // Enable MQTT configuration
+//!         .health()       // Enable health check endpoints
 //!         .build::<MyDynamicConfigs>()
 //!         .await?;
+//!     
+//!     // The configurations are now ready to use
+//!     // otel_providers contains configured OpenTelemetry providers
 //!     
 //!     Ok(())
 //! }

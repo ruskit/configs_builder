@@ -41,7 +41,7 @@ configs-builder = "0.0.1"
 use configs_builder::ConfigBuilder;
 
 async fn setup_configs() -> Result<configs::Configs<MyDynamicConfigs>, configs_builder::errors::ConfigsError> {
-    let configs = ConfigBuilder::new()
+    let (configs, _) = ConfigBuilder::new()
         .postgres()
         .kafka()
         .metric()
@@ -76,7 +76,7 @@ DATABASE_PASSWORD=!my-db-password-secret
 use configs_builder::ConfigBuilder;
 
 async fn setup_configs() -> Result<configs::Configs<MyDynamicConfigs>, configs_builder::errors::ConfigsError> {
-    let configs = ConfigBuilder::new()
+    let (configs, providers) = ConfigBuilder::new()
         .mqtt()            // Enable MQTT configuration
         .rabbitmq()        // Enable RabbitMQ configuration
         .kafka()           // Enable Kafka configuration
