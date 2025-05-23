@@ -67,6 +67,7 @@ use configs::{
 };
 use dotenvy::from_filename;
 use logging;
+use otel::providers::OtelProviders;
 use secrets_manager::{AWSSecretClientBuilder, FakeSecretClient, SecretClient};
 use std::{env, str::FromStr, sync::Arc, time::Duration};
 use tracing::error;
@@ -233,7 +234,7 @@ impl ConfigBuilder {
     ///
     /// A `Result` containing the populated `Configs<T>` struct or a `ConfigsError` if
     /// configuration building fails.
-    pub async fn build<'c, T>(&mut self) -> Result<Configs<T>, ConfigsError>
+    pub async fn build<'c, T>(&mut self) -> Result<(Configs<T>, OtelProviders), ConfigsError>
     where
         T: DynamicConfigs,
     {
@@ -245,7 +246,7 @@ impl ConfigBuilder {
         let mut cfg = Configs::<T>::default();
         cfg.app = AppConfigs::new();
 
-        let _logger_provider = match logging::provider::install() {
+        let logger_provider = match logging::provider::install() {
             Ok(p) => Ok(p),
             Err(err) => {
                 error!(
@@ -295,10 +296,31 @@ impl ConfigBuilder {
             };
         }
 
-        //Trace Provider
-        //Metric Provider
+        let metrics_provider = match metrics::provider::install() {
+            Ok(p) => Ok(p),
+            Err(err) => {
+                error!(
+                    error = ?err,
+                    "failed to install metrics provider"
+                );
+                Err(ConfigsError::MetricsSetupError)
+            }
+        }?;
 
-        Ok(cfg)
+        let trace_provider = match traces::provider::install() {
+            Ok(p) => Ok(p),
+            Err(err) => {
+                error!(
+                    error = ?err,
+                    "failed to install tracing provider"
+                );
+                Err(ConfigsError::TracesSetupError)
+            }
+        }?;
+
+        let providers = OtelProviders::new(logger_provider, metrics_provider, trace_provider);
+
+        Ok((cfg, providers))
     }
 }
 

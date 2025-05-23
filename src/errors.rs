@@ -21,6 +21,12 @@ pub enum ConfigsError {
     #[error("failed to configure logging")]
     LoggingSetupError,
 
+    #[error("failed to configure metrics")]
+    MetricsSetupError,
+
+    #[error("failed to configure trace")]
+    TracesSetupError,
+
     /// Error that occurred while loading secrets from a secret manager.
     /// Contains a message with details about the error.
     #[error("error to load secrets from secret manager - `{0}`")]
