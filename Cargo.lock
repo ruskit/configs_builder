@@ -589,17 +589,9 @@ dependencies = [
 [[package]]
 name = "configs"
 version = "0.0.1"
-source = "git+ssh://git@github.com/ruskit/configs.git?rev=beta-v0.0.3#55ddd1e07f6f01d023c15f93e03e1698e270dbb8"
+source = "git+ssh://git@github.com/ruskit/configs.git?rev=beta-v0.0.4#3b98dd9d106db6c1447a6e1166cf8d66e243eda7"
 dependencies = [
  "secrets-manager",
- "serde",
-]
-
-[[package]]
-name = "configs"
-version = "0.0.1"
-source = "git+ssh://git@github.com/ruskit/configs.git?rev=v0.0.0#b5c8fe32f7c9ee4c974fce0bacee4a2e3ad4931e"
-dependencies = [
  "serde",
 ]
 
@@ -608,12 +600,15 @@ name = "configs-builder"
 version = "0.0.1"
 dependencies = [
  "base64 0.22.1",
- "configs 0.0.1 (git+ssh://git@github.com/ruskit/configs.git?rev=beta-v0.0.3)",
+ "configs",
  "dotenvy",
  "logging",
+ "metrics",
+ "otel",
  "secrets-manager",
  "serde_json",
  "thiserror",
+ "traces",
  "tracing",
 ]
 
@@ -1308,9 +1303,9 @@ checksum = "13dc2df351e3202783a1fe0d44375f7295ffb4049267b0f3018346dc122a1d94"
 [[package]]
 name = "logging"
 version = "0.0.1"
-source = "git+ssh://git@github.com/ruskit/logging.git?rev=beta-v0.0.0#c10b0dd510c8719a94eebb2f079da79eeee3eda9"
+source = "git+ssh://git@github.com/ruskit/logging.git?rev=beta-v0.0.2#250c194cab40c8e6071282b54b3705d66bc88778"
 dependencies = [
- "configs 0.0.1 (git+ssh://git@github.com/ruskit/configs.git?rev=v0.0.0)",
+ "configs",
  "opentelemetry",
  "opentelemetry-appender-tracing",
  "opentelemetry_sdk",
@@ -1336,6 +1331,18 @@ name = "memchr"
 version = "2.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
+
+[[package]]
+name = "metrics"
+version = "0.0.1"
+source = "git+ssh://git@github.com/ruskit/metrics.git?rev=beta-v0.0.1#ba687616dc4f699a2342590ea1238708babfcae6"
+dependencies = [
+ "configs",
+ "opentelemetry",
+ "opentelemetry_sdk",
+ "thiserror",
+ "tracing",
+]
 
 [[package]]
 name = "minimal-lexical"
@@ -1469,6 +1476,18 @@ dependencies = [
  "rand",
  "serde_json",
  "thiserror",
+ "tokio",
+ "tokio-stream",
+ "tracing",
+]
+
+[[package]]
+name = "otel"
+version = "0.1.0"
+source = "git+ssh://git@github.com/ruskit/otel.git?rev=beta-v0.0.0#dca196c10836f0f621e3300fe509a9124af1b14c"
+dependencies = [
+ "opentelemetry",
+ "opentelemetry_sdk",
  "tracing",
 ]
 
@@ -2091,6 +2110,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "tokio-stream"
+version = "0.1.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eca58d7bba4a75707817a2c44174253f9236b2d5fbd055602e9d5c07c139a047"
+dependencies = [
+ "futures-core",
+ "pin-project-lite",
+ "tokio",
+]
+
+[[package]]
 name = "tokio-util"
 version = "0.7.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2124,6 +2154,19 @@ name = "tower-service"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8df9b6e13f2d32c91b9bd719c00d1958837bc7dec474d94952798cc8e69eeec3"
+
+[[package]]
+name = "traces"
+version = "0.0.1"
+source = "git+ssh://git@github.com/ruskit/traces.git?rev=beta-v0.0.0#f769bc05f166f0b482315edb71084c804ff1ed90"
+dependencies = [
+ "configs",
+ "opentelemetry",
+ "opentelemetry_sdk",
+ "serde",
+ "thiserror",
+ "tracing",
+]
 
 [[package]]
 name = "tracing"
